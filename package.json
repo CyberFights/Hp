@@ -4,10 +4,9 @@
   "description": "HTTP API that generates health/stamina bar images and returns JSON with image URL.",
   "main": "server.js",
   "type": "commonjs",
-  "scripts": {
+    "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "clean": "rm -rf tmp/images/*"
+    "dev": "PORT=3000 node server.js"
   },
   "keywords": ["node", "http", "canvas", "health-bar", "api", "gaming"],
   "author": "Your Name",
