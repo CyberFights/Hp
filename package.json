@@ -1,24 +1,22 @@
 {
   "name": "health-bar-api",
   "version": "1.0.0",
-  "description": "HTTP API that generates a health and stamina bar image and returns a URL to it.",
+  "description": "HTTP API that generates health/stamina bar images and returns JSON with image URL.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "clean": "rm -rf tmp/images/*"
   },
-  "keywords": [
-    "node",
-    "http",
-    "canvas",
-    "image",
-    "health-bar",
-    "api"
-  ],
-  "author": "",
+  "keywords": ["node", "http", "canvas", "health-bar", "api", "gaming"],
+  "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "canvas": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
+
