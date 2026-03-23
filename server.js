@@ -1,5 +1,5 @@
 const http = require("http");
-const { createCanvas } = require("canvas");
+const { createCanvas } = require("skia-canvas");
 const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
