@@ -4,7 +4,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; 
 const IMG_DIR = path.join(process.cwd(), "tmp", "images");
 const IMAGES = new Map(); // Tracks image ID -> filename
 
@@ -169,6 +169,7 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ success: false, error: "Not found" }));
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const actualPort = process.env.PORT || 3000;
+server.listen(actualPort, '0.0.0.0', () => {
+  console.log(`Server running on port ${actualPort}`);
 });
