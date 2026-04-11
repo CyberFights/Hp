@@ -40,8 +40,8 @@ function getBattleState(state) {
 
 function createPlayerState() {
   return {
-    health: 20,
-    stamina: 10,
+    health: 100,
+    stamina: 0,
     attraction: 0,
     atkMultiplier: 1,
     defMultiplier: 1
@@ -216,10 +216,6 @@ function resolveMove(game, playerId, payload) {
     game
   };
 }
-
-app.get("/", (req, res) => {
-  return res.json({api: running});
-});
 
 app.post("/api/create-game", (req, res) => {
   const { roomId } = req.body;
