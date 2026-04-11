@@ -217,6 +217,10 @@ function resolveMove(game, playerId, payload) {
   };
 }
 
+app.get("/", (req, res) => {
+  return res.json({api: running});
+});
+
 app.post("/api/create-game", (req, res) => {
   const { roomId } = req.body;
 
