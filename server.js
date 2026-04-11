@@ -1,8 +1,8 @@
 // server.js
 const express = require("express");
 
-const app = express();
-app.use(express.json());
+const server = express();
+server.use(express.json());
 
 // In‑memory games
 const games = new Map();
@@ -297,7 +297,7 @@ app.post("/api/game-state", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
