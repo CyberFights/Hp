@@ -293,7 +293,11 @@ app.post("/api/game-state", (req, res) => {
   });
 });
 
+// Starting the server with error handling
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server listening on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
+}).on('error', (err) => {
+    console.error(`Error occurred while starting the server: ${err.message}`);
+    process.exit(1);
 });
