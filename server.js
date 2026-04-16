@@ -143,7 +143,8 @@ function resolveMove(game, playerId, payload) {
 
     result.damageDealt = damage;
     result.selfDamage = selfDamage;
-
+    
+    opp.health = clamp(opp.health - damage, 0, 20);
     opp.attraction = clamp(opp.attraction + damage, 0, 10);
     self.health = clamp(self.health - selfDamage, 0, 20);
   }
