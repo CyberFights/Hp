@@ -128,7 +128,7 @@ function resolveMove(game, playerId, payload) {
     result.attackRoll = roll;
     const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
     result.damageDealt = damage;
-    opp.health = clamp(opp.health - damage, 0, 20);
+    opp.health = clamp(opp.health - damage, 0, 100);
   }
 
   if (moveType === "submission") {
@@ -144,16 +144,16 @@ function resolveMove(game, playerId, payload) {
     result.damageDealt = damage;
     result.selfDamage = selfDamage;
     
-    opp.health = clamp(opp.health - damage, 0, 20);
-    opp.attraction = clamp(opp.attraction + damage, 0, 10);
-    self.health = clamp(self.health - selfDamage, 0, 20);
+    opp.health = clamp(opp.health - damage, 0, 100);
+    opp.attraction = clamp(opp.attraction + damage, 0, 100);
+    self.health = clamp(self.health - selfDamage, 0, 100);
   }
 
   if (moveType === "escape") {
     const escapeRoll = rollDice();
     result.escapeRoll = escapeRoll;
     result.escaped = escapeRoll % 2 === 0;
-    self.stamina = clamp(self.stamina - 1, 0, 10);
+    self.stamina = clamp(self.stamina - 1, 0, 100);
   }
 
   if (moveType === "teasing") {
@@ -162,7 +162,7 @@ function resolveMove(game, playerId, payload) {
 
     const staminaGain = Math.max(0, Math.floor(teasingRoll * atkMul));
     result.staminaGained = staminaGain;
-    self.stamina = clamp(self.stamina + staminaGain, 0, 10);
+    self.stamina = clamp(self.stamina + staminaGain, 0, 100);
   }
 
   if (moveType === "pin") {
@@ -171,9 +171,9 @@ function resolveMove(game, playerId, payload) {
     result.pinEscaped = getPinAllowedRolls(self.health, 20).includes(pinRoll);
   }
 
-  self.health = clamp(self.health, 0, 20);
-  self.stamina = clamp(self.stamina, 0, 10);
-  self.attraction = clamp(self.attraction, 0, 10);
+  self.health = clamp(self.health, 0, 100);
+  self.stamina = clamp(self.stamina, 0, 100);
+  self.attraction = clamp(self.attraction, 0, 100);
 
   result.updatedHealth = self.health;
   result.updatedStamina = self.stamina;
