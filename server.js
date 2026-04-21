@@ -318,6 +318,27 @@ app.post("/api/end-game", (req, res) => {
   });
 });
 
+app.post("/api/end-all-games", (req, res) => {
+  const { outcome } = req.body;
+
+  let endedGamesCount = 0;
+
+  games.forEach((game, roomId) => {
+    if (!game.state.finished) {
+      game.state.finished = true;
+      game.state.winner = null;
+      game.state.outcome = outcome || "manually ended";
+      endedGamesCount++;
+    }
+  });
+
+  return res.json({
+    success: true,
+    message: `All active games have been manually ended.`,
+    endedGamesCount
+  });
+});
+
 // Starting the server with error handling
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
