@@ -294,6 +294,30 @@ app.post("/api/game-state", (req, res) => {
   });
 });
 
+app.post("/api/end-game", (req, res) => {
+  const { roomId, winner, outcome } = req.body;
+
+  const game = games.get(roomId);
+
+  if (!game) {
+    return res.status(404).json({ error: "Game not found." });
+  }
+
+  if (game.state.finished) {
+    return res.status(400).json({ error: "The game is already finished." });
+  }
+
+  game.state.finished = true;
+  game.state.winner = winner || null;
+  game.state.outcome = outcome || "manually ended";
+
+  return res.json({
+    success: true,
+    message: "The game has been manually ended.",
+    state: game.state
+  });
+});
+
 // Starting the server with error handling
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
