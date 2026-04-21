@@ -183,8 +183,8 @@ function resolveMove(game, playerId, payload) {
     health: self.health,
     stamina: self.stamina,
     attraction: self.attraction,
-    maxStamina: 10,
-    maxAttraction: 10
+    maxStamina: 100,
+    maxAttraction: 100
   });
 
   result.won = battleState.won;
