@@ -29,7 +29,7 @@ function getBattleState(state) {
     state.stamina >= state.maxStamina ||
     state.attraction >= state.maxAttraction;
 
-  const lost = state.health <= 0 || state.stamina <= 0;
+  const lost = state.health <= 0;
   const ko = state.health <= 0;
   const tie =
     (state.health <= 0 && state.stamina <= 0) ||
