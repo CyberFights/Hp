@@ -1,11 +1,27 @@
-// server.js
 const express = require("express");
 
 const app = express();
 app.use(express.json());
 
-// In‑memory games
+// In-memory games
 const games = new Map();
+
+function logError(context, err, extra = {}) {
+  console.error(`[${new Date().toISOString()}] ${context}`, {
+    message: err?.message || err,
+    stack: err?.stack,
+    ...extra
+  });
+}
+
+process.on("unhandledRejection", (reason, promise) => {
+  logError("Unhandled Rejection", reason, { promise });
+});
+
+process.on("uncaughtException", (err) => {
+  logError("Uncaught Exception", err);
+  process.exit(1);
+});
 
 function rollDice() {
   return Math.floor(Math.random() * 6) + 1;
@@ -66,298 +82,334 @@ function createGame(roomId) {
   return game;
 }
 
-function getActivePlayer(game) {
-  const playerIds = Array.from(game.players);
-  return playerIds[game.state.turnIndex % playerIds.length];
-}
-
 function resolveMove(game, playerId, payload) {
-  if (game.state.finished) {
-    return { success: false, error: "Match is already finished." };
-  }
+  try {
+    if (game.state.finished) {
+      return { success: false, error: "Match is already finished." };
+    }
 
-  if (!game.players.has(playerId)) {
-    return { success: false, error: "Player is not in this game." };
-  }
+    if (!game.players.has(playerId)) {
+      return { success: false, error: "Player is not in this game." };
+    }
 
-  const playerIds = Array.from(game.players);
-  if (playerIds.indexOf(playerId) !== game.state.turnIndex % playerIds.length) {
-    return { success: false, error: "Not your turn." };
-  }
+    const playerIds = Array.from(game.players);
+    if (playerIds.indexOf(playerId) !== game.state.turnIndex % playerIds.length) {
+      return { success: false, error: "Not your turn." };
+    }
 
-  const playerIndex = playerIds.indexOf(playerId);
-  const selfKey = playerIndex === 0 ? "p1" : "p2";
-  const oppKey = playerIndex === 0 ? "p2" : "p1";
-  const self = game.state[selfKey];
-  const opp = game.state[oppKey];
+    const playerIndex = playerIds.indexOf(playerId);
+    const selfKey = playerIndex === 0 ? "p1" : "p2";
+    const oppKey = playerIndex === 0 ? "p2" : "p1";
+    const self = game.state[selfKey];
+    const opp = game.state[oppKey];
 
-  const {
-    moveType,
-    atkMultiplier: atkMul,      // now from POST body
-    defMultiplier: defMul       // now from POST body
-  } = payload;
+    const {
+      moveType,
+      atkMultiplier: atkMul,
+      defMultiplier: defMul
+    } = payload;
 
-  const result = {
-    playerId,
-    playerIndex,
-    moveType,
-    atkMultiplier: atkMul,
-    defMultiplier: defMul,
-    attackRoll: null,
-    submissionRoll: null,
-    selfDamageRoll: null,
-    escapeRoll: null,
-    teasingRoll: null,
-    pinRoll: null,
-    escaped: false,
-    pinEscaped: false,
-    damageDealt: 0,
-    selfDamage: 0,
-    staminaGained: 0,
-    updatedHealth: self.health,
-    updatedStamina: self.stamina,
-    updatedAttraction: self.attraction,
-    won: false,
-    lost: false,
-    tie: false,
-    ko: false
-  };
+    const result = {
+      playerId,
+      playerIndex,
+      moveType,
+      atkMultiplier: atkMul,
+      defMultiplier: defMul,
+      attackRoll: null,
+      submissionRoll: null,
+      selfDamageRoll: null,
+      escapeRoll: null,
+      teasingRoll: null,
+      pinRoll: null,
+      escaped: false,
+      pinEscaped: false,
+      damageDealt: 0,
+      selfDamage: 0,
+      staminaGained: 0,
+      updatedHealth: self.health,
+      updatedStamina: self.stamina,
+      updatedAttraction: self.attraction,
+      won: false,
+      lost: false,
+      tie: false,
+      ko: false
+    };
 
-  if (moveType === "attack") {
-    const roll = rollDice();
-    result.attackRoll = roll;
-    const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
-    result.damageDealt = damage;
-    opp.health = clamp(opp.health - damage, 0, 100);
-  }
+    if (moveType === "attack") {
+      const roll = rollDice();
+      result.attackRoll = roll;
+      const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
+      result.damageDealt = damage;
+      opp.health = clamp(opp.health - damage, 0, 100);
+    }
 
-  if (moveType === "submission") {
-    const submissionRoll = rollDice();
-    const selfDamageRoll = rollDice();
+    if (moveType === "submission") {
+      const submissionRoll = rollDice();
+      const selfDamageRoll = rollDice();
 
-    result.submissionRoll = submissionRoll;
-    result.selfDamageRoll = selfDamageRoll;
+      result.submissionRoll = submissionRoll;
+      result.selfDamageRoll = selfDamageRoll;
 
-    const damage = Math.max(0, Math.floor(submissionRoll * atkMul - defMul));
-    const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
+      const damage = Math.max(0, Math.floor(submissionRoll * atkMul - defMul));
+      const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
 
-    result.damageDealt = damage;
-    result.selfDamage = selfDamage;
-    
-    opp.health = clamp(opp.health - damage, 0, 100);
-    opp.attraction = clamp(opp.attraction + damage, 0, 100);
-    self.health = clamp(self.health - selfDamage, 0, 100);
-  }
+      result.damageDealt = damage;
+      result.selfDamage = selfDamage;
 
-  if (moveType === "escape") {
-    const escapeRoll = rollDice();
-    result.escapeRoll = escapeRoll;
-    result.escaped = escapeRoll % 2 === 0;
+      opp.health = clamp(opp.health - damage, 0, 100);
+      opp.attraction = clamp(opp.attraction + damage, 0, 100);
+      self.health = clamp(self.health - selfDamage, 0, 100);
+    }
 
-    if (result.escaped) {
+    if (moveType === "escape") {
+      const escapeRoll = rollDice();
+      result.escapeRoll = escapeRoll;
+      result.escaped = escapeRoll % 2 === 0;
+
+      if (result.escaped) {
         const attackRoll = rollDice();
         result.attackRoll = attackRoll;
 
-        // Calculate damage to the opponent as attackRoll * atkMultiplier - defMultiplier
         const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
         result.damageDealt = damage;
-
-        // Reduce the opponent's health
         opp.health = clamp(opp.health - damage, 0, 100);
+      }
+
+      self.stamina = clamp(self.stamina - 1, 0, 100);
     }
 
-    // Deduct stamina even if the escape was not successful
-    self.stamina = clamp(self.stamina - 1, 0, 100);
-}
+    if (moveType === "teasing") {
+      const teasingRoll = rollDice();
+      result.teasingRoll = teasingRoll;
 
-  if (moveType === "teasing") {
-    const teasingRoll = rollDice();
-    result.teasingRoll = teasingRoll;
+      const staminaGain = Math.max(0, Math.floor(teasingRoll * atkMul));
+      result.staminaGained = staminaGain;
+      self.stamina = clamp(self.stamina + staminaGain, 0, 100);
+    }
 
-    const staminaGain = Math.max(0, Math.floor(teasingRoll * atkMul));
-    result.staminaGained = staminaGain;
-    self.stamina = clamp(self.stamina + staminaGain, 0, 100);
+    if (moveType === "pin") {
+      const pinRoll = rollDice();
+      result.pinRoll = pinRoll;
+      result.pinEscaped = getPinAllowedRolls(self.health, 20).includes(pinRoll);
+    }
+
+    self.health = clamp(self.health, 0, 100);
+    self.stamina = clamp(self.stamina, 0, 100);
+    self.attraction = clamp(self.attraction, 0, 100);
+
+    result.updatedHealth = self.health;
+    result.updatedStamina = self.stamina;
+    result.updatedAttraction = self.attraction;
+
+    const battleState = getBattleState({
+      health: self.health,
+      stamina: self.stamina,
+      attraction: self.attraction,
+      maxStamina: 100,
+      maxAttraction: 100
+    });
+
+    result.won = battleState.won;
+    result.lost = battleState.lost;
+    result.tie = battleState.tie;
+    result.ko = battleState.ko;
+
+    if (result.tie) {
+      game.state.finished = true;
+      game.state.outcome = "tie";
+    } else if (result.ko) {
+      game.state.finished = true;
+      game.state.outcome = "ko";
+      game.state.winner = playerId;
+    } else if (result.won) {
+      game.state.finished = true;
+      game.state.outcome = "win";
+      game.state.winner = playerId;
+    } else if (result.lost) {
+      game.state.finished = true;
+      game.state.winner = playerIds.find(id => id !== playerId) || null;
+      game.state.outcome = "loss";
+    }
+
+    game.state.turnIndex = (game.state.turnIndex + 1) % playerIds.length;
+
+    return {
+      success: true,
+      result,
+      game
+    };
+  } catch (err) {
+    logError("Error in resolveMove", err, { roomId: game?.id, playerId, payload });
+    return { success: false, error: "Internal server error." };
   }
-
-  if (moveType === "pin") {
-    const pinRoll = rollDice();
-    result.pinRoll = pinRoll;
-    result.pinEscaped = getPinAllowedRolls(self.health, 20).includes(pinRoll);
-  }
-
-  self.health = clamp(self.health, 0, 100);
-  self.stamina = clamp(self.stamina, 0, 100);
-  self.attraction = clamp(self.attraction, 0, 100);
-
-  result.updatedHealth = self.health;
-  result.updatedStamina = self.stamina;
-  result.updatedAttraction = self.attraction;
-
-  const battleState = getBattleState({
-    health: self.health,
-    stamina: self.stamina,
-    attraction: self.attraction,
-    maxStamina: 100,
-    maxAttraction: 100
-  });
-
-  result.won = battleState.won;
-  result.lost = battleState.lost;
-  result.tie = battleState.tie;
-  result.ko = battleState.ko;
-
-  if (result.tie) {
-    game.state.finished = true;
-    game.state.outcome = "tie";
-  } else if (result.ko) {
-    game.state.finished = true;
-    game.state.outcome = "ko";
-    game.state.winner = playerId;
-  } else if (result.won) {
-    game.state.finished = true;
-    game.state.outcome = "win";
-    game.state.winner = playerId;
-  } else if (result.lost) {
-    game.state.finished = true;
-    game.state.winner = playerIds.find(id => id !== playerId) || null;
-    game.state.outcome = "loss";
-  }
-
-  game.state.turnIndex = (game.state.turnIndex + 1) % playerIds.length;
-
-  return {
-    success: true,
-    result,
-    game
-  };
 }
 
 app.post("/api/create-game", (req, res) => {
-  const { roomId } = req.body;
+  try {
+    const { roomId } = req.body;
 
-  if (!roomId) {
-    return res.status(400).json({ error: "Missing roomId." });
+    if (!roomId) {
+      return res.status(400).json({ error: "Missing roomId." });
+    }
+
+    if (games.has(roomId)) {
+      return res.status(400).json({ error: "Room already exists." });
+    }
+
+    const game = createGame(roomId);
+    return res.json({ gameId: game.id });
+  } catch (err) {
+    logError("Error in /api/create-game", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
   }
-
-  if (games.has(roomId)) {
-    return res.status(400).json({ error: "Room already exists." });
-  }
-
-  const game = createGame(roomId);
-  return res.json({ gameId: game.id });
 });
 
 app.post("/api/join-game", (req, res) => {
-  const { roomId, playerId } = req.body;
+  try {
+    const { roomId, playerId } = req.body;
 
-  const game = games.get(roomId);
-  if (!game) {
-    return res.status(404).json({ error: "Room not found." });
+    const game = games.get(roomId);
+    if (!game) {
+      return res.status(404).json({ error: "Room not found." });
+    }
+
+    if (game.players.size >= 2) {
+      return res.status(400).json({ error: "Room is full." });
+    }
+
+    game.players.add(playerId);
+    return res.json({ success: true, gameId: roomId, players: Array.from(game.players) });
+  } catch (err) {
+    logError("Error in /api/join-game", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
   }
-
-  if (game.players.size >= 2) {
-    return res.status(400).json({ error: "Room is full." });
-  }
-
-  game.players.add(playerId);
-  return res.json({ success: true, gameId: roomId, players: Array.from(game.players) });
 });
 
 app.post("/api/dice-match", (req, res) => {
-  const { roomId, playerId, moveType, atkMultiplier, defMultiplier } = req.body;
+  try {
+    const { roomId, playerId, moveType, atkMultiplier, defMultiplier } = req.body;
 
-  const game = games.get(roomId);
-  if (!game) {
-    return res.status(404).json({ error: "Game not found." });
+    const game = games.get(roomId);
+    if (!game) {
+      return res.status(404).json({ error: "Game not found." });
+    }
+
+    const outcome = resolveMove(game, playerId, {
+      moveType,
+      atkMultiplier,
+      defMultiplier
+    });
+
+    if (!outcome.success) {
+      logError("Move rejected in /api/dice-match", outcome.error, { body: req.body });
+      return res.status(400).json(outcome);
+    }
+
+    return res.json({
+      result: outcome.result,
+      game: {
+        id: game.id,
+        players: Array.from(game.players),
+        state: game.state,
+        outcome: game.state.outcome
+      }
+    });
+  } catch (err) {
+    logError("Error in /api/dice-match", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
   }
+});
 
-  const outcome = resolveMove(game, playerId, {
-    moveType,
-    atkMultiplier,
-    defMultiplier
-  });
+app.post("/api/game-state", (req, res) => {
+  try {
+    const { roomId } = req.body;
+    const game = games.get(roomId);
 
-  if (!outcome.success) {
-    return res.status(400).json(outcome);
-  }
+    if (!game) {
+      return res.status(404).json({ error: "Game not found." });
+    }
 
-  return res.json({
-    result: outcome.result,
-    game: {
+    return res.json({
       id: game.id,
       players: Array.from(game.players),
       state: game.state,
       outcome: game.state.outcome
-    }
-  });
-});
-
-app.post("/api/game-state", (req, res) => {
-  const { roomId } = req.body;
-  const game = games.get(roomId);
-
-  if (!game) {
-    return res.status(404).json({ error: "Game not found." });
+    });
+  } catch (err) {
+    logError("Error in /api/game-state", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
   }
-
-  return res.json({
-    id: game.id,
-    players: Array.from(game.players),
-    state: game.state,
-    outcome: game.state.outcome
-  });
 });
 
 app.post("/api/end-game", (req, res) => {
-  const { roomId, winner, outcome } = req.body;
+  try {
+    const { roomId, winner, outcome } = req.body;
 
-  const game = games.get(roomId);
+    const game = games.get(roomId);
 
-  if (!game) {
-    return res.status(404).json({ error: "Game not found." });
+    if (!game) {
+      return res.status(404).json({ error: "Game not found." });
+    }
+
+    if (game.state.finished) {
+      return res.status(400).json({ error: "The game is already finished." });
+    }
+
+    game.state.finished = true;
+    game.state.winner = winner || null;
+    game.state.outcome = outcome || "manually ended";
+
+    return res.json({
+      success: true,
+      message: "The game has been manually ended.",
+      state: game.state
+    });
+  } catch (err) {
+    logError("Error in /api/end-game", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
   }
-
-  if (game.state.finished) {
-    return res.status(400).json({ error: "The game is already finished." });
-  }
-
-  game.state.finished = true;
-  game.state.winner = winner || null;
-  game.state.outcome = outcome || "manually ended";
-
-  return res.json({
-    success: true,
-    message: "The game has been manually ended.",
-    state: game.state
-  });
 });
 
 app.post("/api/end-all-games", (req, res) => {
-  const { outcome } = req.body;
+  try {
+    const { outcome } = req.body;
 
-  let endedGamesCount = 0;
+    let endedGamesCount = 0;
 
-  games.forEach((game, roomId) => {
-    if (!game.state.finished) {
-      game.state.finished = true;
-      game.state.winner = null;
-      game.state.outcome = outcome || "manually ended";
-      endedGamesCount++;
-    }
+    games.forEach((game) => {
+      if (!game.state.finished) {
+        game.state.finished = true;
+        game.state.winner = null;
+        game.state.outcome = outcome || "manually ended";
+        endedGamesCount++;
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: `All active games have been manually ended.`,
+      endedGamesCount
+    });
+  } catch (err) {
+    logError("Error in /api/end-all-games", err, { body: req.body });
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// 404 handler
+app.use((req, res) => {
+  console.error(`[${new Date().toISOString()}] 404 Not Found`, {
+    method: req.method,
+    path: req.originalUrl
   });
-
-  return res.json({
-    success: true,
-    message: `All active games have been manually ended.`,
-    endedGamesCount
-  });
+  return res.status(404).json({ error: "Not found." });
 });
 
 // Starting the server with error handling
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is running on port ${PORT}`);
-}).on('error', (err) => {
-    console.error(`Error occurred while starting the server: ${err.message}`);
-    process.exit(1);
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server is running on port ${PORT}`);
+}).on("error", (err) => {
+  logError("Server listen error", err);
+  process.exit(1);
 });
