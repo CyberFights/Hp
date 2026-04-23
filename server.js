@@ -57,12 +57,13 @@ function getBattleState(state) {
 function createPlayerState() {
   return {
     health: 100,
-    stamina: 0,
+    stamina: 100,
     attraction: 0,
     atkMultiplier: 1,
     defMultiplier: 1
   };
 }
+
 
 function createGame(roomId) {
   const game = {
@@ -136,56 +137,69 @@ function resolveMove(game, playerId, payload) {
     };
 
     if (moveType === "attack") {
-      const roll = rollDice();
-      result.attackRoll = roll;
-      const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
-      result.damageDealt = damage;
-      opp.health = clamp(opp.health - damage, 0, 100);
-    }
+  const roll = rollDice();
+  result.attackRoll = roll;
+  const staminaCost = Math.floor(roll / 2);
+  const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
+  result.damageDealt = damage;
+
+  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+  opp.health = clamp(opp.health - damage, 0, 100);
+}
+
 
     if (moveType === "submission") {
-      const submissionRoll = rollDice();
-      const selfDamageRoll = rollDice();
+  const submissionRoll = rollDice();
+  const selfDamageRoll = rollDice();
 
-      result.submissionRoll = submissionRoll;
-      result.selfDamageRoll = selfDamageRoll;
+  result.submissionRoll = submissionRoll;
+  result.selfDamageRoll = selfDamageRoll;
 
-      const damage = Math.max(0, Math.floor(submissionRoll * atkMul - defMul));
-      const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
+  const staminaCost = Math.floor(submissionRoll / 2);
+  const damage = Math.max(0, Math.floor(submissionRoll * atkMul - defMul));
+  const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
 
-      result.damageDealt = damage;
-      result.selfDamage = selfDamage;
+  result.damageDealt = damage;
+  result.selfDamage = selfDamage;
 
-      opp.health = clamp(opp.health - damage, 0, 100);
-      opp.attraction = clamp(opp.attraction + damage, 0, 100);
-      self.health = clamp(self.health - selfDamage, 0, 100);
-    }
+  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+  opp.health = clamp(opp.health - damage, 0, 100);
+  opp.attraction = clamp(opp.attraction + damage, 0, 100);
+  self.health = clamp(self.health - selfDamage, 0, 100);
+}
+
 
     if (moveType === "escape") {
-      const escapeRoll = rollDice();
-      result.escapeRoll = escapeRoll;
-      result.escaped = escapeRoll % 2 === 0;
+  const escapeRoll = rollDice();
+  result.escapeRoll = escapeRoll;
+  result.escaped = escapeRoll % 2 === 0;
 
-      if (result.escaped) {
-        const attackRoll = rollDice();
-        result.attackRoll = attackRoll;
+  const staminaCost = Math.floor(escapeRoll / 2);
+  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
 
-        const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
-        result.damageDealt = damage;
-        opp.health = clamp(opp.health - damage, 0, 100);
-      }
+  if (result.escaped) {
+    const attackRoll = rollDice();
+    result.attackRoll = attackRoll;
 
-      self.stamina = clamp(self.stamina - 1, 0, 100);
-    }
+    const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
+    result.damageDealt = damage;
+    opp.health = clamp(opp.health - damage, 0, 100);
+  }
+}
+
 
     if (moveType === "teasing") {
-      const teasingRoll = rollDice();
-      result.teasingRoll = teasingRoll;
+  const teasingRoll = rollDice();
+  result.teasingRoll = teasingRoll;
 
-      const staminaGain = Math.max(0, Math.floor(teasingRoll * atkMul));
-      result.staminaGained = staminaGain;
-      self.stamina = clamp(self.stamina + staminaGain, 0, 100);
-    }
+  const staminaCost = Math.floor(teasingRoll / 2);
+  const attractionGain = Math.max(0, Math.floor(teasingRoll * atkMul));
+  result.staminaGained = 0;
+
+  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+  opp.attraction = clamp(opp.attraction + attractionGain, 0, 100);
+}
+
 
     if (moveType === "pin") {
       const pinRoll = rollDice();
