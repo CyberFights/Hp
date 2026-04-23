@@ -153,8 +153,22 @@ function resolveMove(game, playerId, payload) {
     const escapeRoll = rollDice();
     result.escapeRoll = escapeRoll;
     result.escaped = escapeRoll % 2 === 0;
+
+    if (result.escaped) {
+        const attackRoll = rollDice();
+        result.attackRoll = attackRoll;
+
+        // Calculate damage to the opponent as attackRoll * atkMultiplier - defMultiplier
+        const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
+        result.damageDealt = damage;
+
+        // Reduce the opponent's health
+        opp.health = clamp(opp.health - damage, 0, 100);
+    }
+
+    // Deduct stamina even if the escape was not successful
     self.stamina = clamp(self.stamina - 1, 0, 100);
-  }
+}
 
   if (moveType === "teasing") {
     const teasingRoll = rollDice();
