@@ -40,12 +40,14 @@ function getPinAllowedRolls(currentHealth, maxHealth) {
   return [1, 6];
 }
 
-const battleState = getBattleState(self, opp);
+function getBattleState(self, opp) {
+  const won = opp.health <= 0;
+  const lost = self.health <= 0;
+  const ko = self.health <= 0 && opp.health <= 0;
+  const tie = self.health <= 0 && opp.health <= 0;
 
-result.won = battleState.won;
-result.lost = battleState.lost;
-result.tie = battleState.tie;
-result.ko = battleState.ko;
+  return { won, lost, ko, tie };
+}
 
 
 function createPlayerState() {
@@ -207,17 +209,13 @@ function resolveMove(game, playerId, payload) {
     result.updatedStamina = self.stamina;
     result.updatedAttraction = self.attraction;
 
-    const battleState = {
-      won: opp.health <= 0,
-      lost: self.health <= 0,
-      ko: self.health <= 0 && opp.health <= 0,
-      tie: self.health <= 0 && opp.health <= 0
-    };
+    const battleState = getBattleState(self, opp);
 
-    result.won = battleState.won;
-    result.lost = battleState.lost;
-    result.tie = battleState.tie;
-    result.ko = battleState.ko;
+result.won = battleState.won;
+result.lost = battleState.lost;
+result.tie = battleState.tie;
+result.ko = battleState.ko;
+
 
     if (result.tie) {
       game.state.finished = true;
