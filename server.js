@@ -40,19 +40,13 @@ function getPinAllowedRolls(currentHealth, maxHealth) {
   return [1, 6];
 }
 
-function getBattleState(state) {
-  const won =
-    state.stamina >= state.maxStamina ||
-    state.attraction >= state.maxAttraction;
+const battleState = getBattleState(self, opp);
 
-  const lost = state.health <= 0;
-  const ko = state.health <= 0;
-  const tie =
-    (state.health <= 0 && state.stamina <= 0) ||
-    (won && lost);
+result.won = battleState.won;
+result.lost = battleState.lost;
+result.tie = battleState.tie;
+result.ko = battleState.ko;
 
-  return { won, lost, ko, tie };
-}
 
 function createPlayerState() {
   return {
@@ -106,8 +100,8 @@ function resolveMove(game, playerId, payload) {
 
     const {
       moveType,
-      atkMultiplier: atkMul,
-      defMultiplier: defMul
+      atkMultiplier: atkMul = 1,
+      defMultiplier: defMul = 1
     } = payload;
 
     const result = {
@@ -137,71 +131,64 @@ function resolveMove(game, playerId, payload) {
     };
 
     if (moveType === "attack") {
-  const roll = rollDice();
-  result.attackRoll = roll;
-  const staminaCost = Math.floor(roll / 2);
-  const damage = Math.max(0, Math.floor(roll * (atkMulti - defMulti)));
+      const roll = rollDice();
+      result.attackRoll = roll;
+      const staminaCost = Math.floor(roll / 2);
+      const damage = Math.max(0, Math.floor(roll * (atkMul - defMul)));
 
-  result.damageDealt = damage;
-
-  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
-  opp.health = clamp(opp.health - damage, 0, 100);
-}
-
+      result.damageDealt = damage;
+      self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+      opp.health = clamp(opp.health - damage, 0, 100);
+    }
 
     if (moveType === "submission") {
-  const submissionRoll = rollDice();
-  const selfDamageRoll = rollDice();
+      const submissionRoll = rollDice();
+      const selfDamageRoll = rollDice();
 
-  result.submissionRoll = submissionRoll;
-  result.selfDamageRoll = selfDamageRoll;
+      result.submissionRoll = submissionRoll;
+      result.selfDamageRoll = selfDamageRoll;
 
-  const staminaCost = Math.floor(submissionRoll / 2);
-  const damage = Math.max(0, Math.floor(submissionRoll * (atkMulti - defMulti)));
+      const staminaCost = Math.floor(submissionRoll / 2);
+      const damage = Math.max(0, Math.floor(submissionRoll * (atkMul - defMul)));
+      const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
 
-  const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
+      result.damageDealt = damage;
+      result.selfDamage = selfDamage;
 
-  result.damageDealt = damage;
-  result.selfDamage = selfDamage;
-
-  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
-  opp.health = clamp(opp.health - damage, 0, 100);
-  opp.attraction = clamp(opp.attraction + damage, 0, 100);
-  self.health = clamp(self.health - selfDamage, 0, 100);
-}
-
+      self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+      opp.health = clamp(opp.health - damage, 0, 100);
+      opp.attraction = clamp(opp.attraction + damage, 0, 100);
+      self.health = clamp(self.health - selfDamage, 0, 100);
+    }
 
     if (moveType === "escape") {
-  const escapeRoll = rollDice();
-  result.escapeRoll = escapeRoll;
-  result.escaped = escapeRoll % 2 === 0;
+      const escapeRoll = rollDice();
+      result.escapeRoll = escapeRoll;
+      result.escaped = escapeRoll % 2 === 0;
 
-  const staminaCost = Math.floor(escapeRoll / 2);
-  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+      const staminaCost = Math.floor(escapeRoll / 2);
+      self.stamina = clamp(self.stamina - staminaCost, 0, 100);
 
-  if (result.escaped) {
-    const attackRoll = rollDice();
-    result.attackRoll = attackRoll;
+      if (result.escaped) {
+        const attackRoll = rollDice();
+        result.attackRoll = attackRoll;
 
-    const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
-    result.damageDealt = damage;
-    opp.health = clamp(opp.health - damage, 0, 100);
-  }
-}
-
+        const damage = Math.max(0, Math.floor(attackRoll * atkMul - defMul));
+        result.damageDealt = damage;
+        opp.health = clamp(opp.health - damage, 0, 100);
+      }
+    }
 
     if (moveType === "teasing") {
-  const teasingRoll = rollDice();
-  result.teasingRoll = teasingRoll;
+      const teasingRoll = rollDice();
+      result.teasingRoll = teasingRoll;
 
-  const staminaCost = Math.floor(teasingRoll / 2);
-  const attractionGain = Math.max(0, Math.floor(teasingRoll * atkMul));
-  result.staminaGained = 0;
+      const staminaCost = Math.floor(teasingRoll / 2);
+      const attractionGain = Math.max(0, Math.floor(teasingRoll * atkMul));
 
-  self.stamina = clamp(self.stamina - staminaCost, 0, 100);
-  opp.attraction = clamp(opp.attraction + attractionGain, 0, 100);
-}
-
+      self.stamina = clamp(self.stamina - staminaCost, 0, 100);
+      opp.attraction = clamp(opp.attraction + attractionGain, 0, 100);
+    }
 
     if (moveType === "pin") {
       const pinRoll = rollDice();
@@ -212,18 +199,20 @@ function resolveMove(game, playerId, payload) {
     self.health = clamp(self.health, 0, 100);
     self.stamina = clamp(self.stamina, 0, 100);
     self.attraction = clamp(self.attraction, 0, 100);
+    opp.health = clamp(opp.health, 0, 100);
+    opp.stamina = clamp(opp.stamina, 0, 100);
+    opp.attraction = clamp(opp.attraction, 0, 100);
 
     result.updatedHealth = self.health;
     result.updatedStamina = self.stamina;
     result.updatedAttraction = self.attraction;
 
-    const battleState = getBattleState({
-      health: self.health,
-      stamina: self.stamina,
-      attraction: self.attraction,
-      maxStamina: 100,
-      maxAttraction: 100
-    });
+    const battleState = {
+      won: opp.health <= 0,
+      lost: self.health <= 0,
+      ko: self.health <= 0 && opp.health <= 0,
+      tie: self.health <= 0 && opp.health <= 0
+    };
 
     result.won = battleState.won;
     result.lost = battleState.lost;
@@ -233,18 +222,19 @@ function resolveMove(game, playerId, payload) {
     if (result.tie) {
       game.state.finished = true;
       game.state.outcome = "tie";
+      game.state.winner = null;
     } else if (result.ko) {
       game.state.finished = true;
       game.state.outcome = "ko";
-      game.state.winner = playerId;
+      game.state.winner = null;
     } else if (result.won) {
       game.state.finished = true;
       game.state.outcome = "win";
       game.state.winner = playerId;
     } else if (result.lost) {
       game.state.finished = true;
-      game.state.winner = playerIds.find(id => id !== playerId) || null;
       game.state.outcome = "loss";
+      game.state.winner = playerIds.find(id => id !== playerId) || null;
     }
 
     game.state.turnIndex = (game.state.turnIndex + 1) % playerIds.length;
@@ -259,6 +249,7 @@ function resolveMove(game, playerId, payload) {
     return { success: false, error: "Internal server error." };
   }
 }
+
 
 app.post("/api/create-game", (req, res) => {
   try {
