@@ -140,7 +140,8 @@ function resolveMove(game, playerId, payload) {
   const roll = rollDice();
   result.attackRoll = roll;
   const staminaCost = Math.floor(roll / 2);
-  const damage = Math.max(0, Math.floor(roll * atkMul - defMul));
+  const damage = Math.max(0, Math.floor(roll * (atkMulti - defMulti)));
+
   result.damageDealt = damage;
 
   self.stamina = clamp(self.stamina - staminaCost, 0, 100);
@@ -156,7 +157,8 @@ function resolveMove(game, playerId, payload) {
   result.selfDamageRoll = selfDamageRoll;
 
   const staminaCost = Math.floor(submissionRoll / 2);
-  const damage = Math.max(0, Math.floor(submissionRoll * atkMul - defMul));
+  const damage = Math.max(0, Math.floor(submissionRoll * (atkMulti - defMulti)));
+
   const selfDamage = Math.max(0, Math.floor(selfDamageRoll * defMul));
 
   result.damageDealt = damage;
