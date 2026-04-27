@@ -29,7 +29,7 @@ app.post('/api/roll', (req, res) => {
   const damage = clamp(roll * effectiveAttack, 0, 18);
   const newHealth = Math.max(health - damage, 0);
 
-  const staminaLoss = Math.floor(roll - 2);
+  const staminaLoss = Math.floor(roll - 1);
   const newStamina = Math.max(stamina - staminaLoss);
 
   return res.json({
@@ -70,7 +70,7 @@ app.post('/api/submit', (req, res) => {
   const healthBeforeAttacker = (typeof attackerHealth === 'number') ? attackerHealth : health;
   const healthAfterAttacker = Math.max(healthBeforeAttacker - damageToSelf);
 
-  const staminaLoss = Math.floor(rollTarget - 2);
+  const staminaLoss = Math.floor(rollTarget - 1);
   const staminaBefore = stamina;
   const staminaAfter = Math.max(staminaBefore - staminaLoss);
 
@@ -125,7 +125,7 @@ app.post('/api/escape', (req, res) => {
     // Using clamp to limit damage to 18
     damageToOpponent = clamp(attackRoll * effectiveAttack, 0, 18);
     opponentHealthAfter = Math.max(opponentHealthBefore - damageToOpponent);
-    staminaLoss = Math.floor(attackRoll - 2);
+    staminaLoss = Math.floor(attackRoll - 1);
     staminaAfter = Math.max(staminaBefore - staminaLoss);
   }
 
@@ -180,7 +180,7 @@ app.post('/api/tease', (req, res) => {
   if (maxAttraction !== null) attractionAfter = Math.min(attractionAfter, maxAttraction);
   attractionAfter = Math.max(attractionAfter);
 
-  const staminaLoss = Math.floor(roll - 2);
+  const staminaLoss = Math.floor(roll - 1);
   const staminaBefore = stamina;
   const staminaAfter = Math.max(staminaBefore - staminaLoss);
 
