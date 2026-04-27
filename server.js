@@ -29,8 +29,8 @@ app.post('/api/roll', (req, res) => {
   const damage = clamp(roll * effectiveAttack, 0, 18);
   const newHealth = Math.max(health - damage, 0);
 
-  const staminaLoss = Math.floor(roll / 2);
-  const newStamina = Math.max(stamina - staminaLoss, 0);
+  const staminaLoss = Math.floor(roll - 2);
+  const newStamina = Math.max(stamina - staminaLoss);
 
   return res.json({
     roll,
@@ -65,14 +65,14 @@ app.post('/api/submit', (req, res) => {
   const damageToSelf = clamp(rollSelf * effectiveAttack, 0, 18);
 
   const healthBeforeTarget = health;
-  const healthAfterTarget = Math.max(healthBeforeTarget - damageToTarget, 0);
+  const healthAfterTarget = Math.max(healthBeforeTarget - damageToTarget);
 
   const healthBeforeAttacker = (typeof attackerHealth === 'number') ? attackerHealth : health;
-  const healthAfterAttacker = Math.max(healthBeforeAttacker - damageToSelf, 0);
+  const healthAfterAttacker = Math.max(healthBeforeAttacker - damageToSelf);
 
-  const staminaLoss = Math.floor(rollTarget / 2);
+  const staminaLoss = Math.floor(rollTarget - 2);
   const staminaBefore = stamina;
-  const staminaAfter = Math.max(staminaBefore - staminaLoss, 0);
+  const staminaAfter = Math.max(staminaBefore - staminaLoss);
 
   return res.json({
     rollTarget,
@@ -124,9 +124,9 @@ app.post('/api/escape', (req, res) => {
     attackRoll = rollDice(diceSides);
     // Using clamp to limit damage to 18
     damageToOpponent = clamp(attackRoll * effectiveAttack, 0, 18);
-    opponentHealthAfter = Math.max(opponentHealthBefore - damageToOpponent, 0);
-    staminaLoss = Math.floor(attackRoll / 2);
-    staminaAfter = Math.max(staminaBefore - staminaLoss, 0);
+    opponentHealthAfter = Math.max(opponentHealthBefore - damageToOpponent);
+    staminaLoss = Math.floor(attackRoll - 2);
+    staminaAfter = Math.max(staminaBefore - staminaLoss);
   }
 
   return res.json({
@@ -178,11 +178,11 @@ app.post('/api/tease', (req, res) => {
   const attractionBefore = opponentAttraction;
   let attractionAfter = attractionBefore + attractionIncrease;
   if (maxAttraction !== null) attractionAfter = Math.min(attractionAfter, maxAttraction);
-  attractionAfter = Math.max(attractionAfter, 0);
+  attractionAfter = Math.max(attractionAfter);
 
-  const staminaLoss = Math.floor(roll / 2);
+  const staminaLoss = Math.floor(roll - 2);
   const staminaBefore = stamina;
-  const staminaAfter = Math.max(staminaBefore - staminaLoss, 0);
+  const staminaAfter = Math.max(staminaBefore - staminaLoss);
 
   return res.json({
     roll, sides: diceSides, atk, def, effectiveAttack,
