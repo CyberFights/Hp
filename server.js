@@ -191,5 +191,53 @@ app.post('/api/tease', (req, res) => {
   });
 });
 
+   app.post('/api/recover', (req, res) => {
+  const { health, stamina, maxHealth, maxStamina, sides } = req.body;
+
+  if (typeof health !== 'number' || typeof stamina !== 'number') {
+    return res.status(400).json({ error: 'health and stamina must be numbers' });
+  }
+
+  const diceSides = (typeof sides === 'number' && sides >= 2) ? Math.floor(sides) : 6;
+
+  const rolls = [
+    rollDice(diceSides),
+    rollDice(diceSides),
+    rollDice(diceSides),
+    rollDice(diceSides)
+  ];
+
+  const recoveryTotal = rolls.reduce((sum, r) => sum + r, 0);
+
+  const healthBefore = health;
+  const staminaBefore = stamina;
+
+  const healthCap = (typeof maxHealth === 'number' && maxHealth > 0) ? maxHealth : null;
+  const staminaCap = (typeof maxStamina === 'number' && maxStamina > 0) ? maxStamina : null;
+
+  const healthAfterRaw = healthBefore + recoveryTotal;
+  const staminaAfterRaw = staminaBefore + recoveryTotal;
+
+  const healthAfter = healthCap !== null
+    ? clamp(healthAfterRaw, 0, healthCap)
+    : Math.max(healthAfterRaw, 0);
+
+  const staminaAfter = staminaCap !== null
+    ? clamp(staminaAfterRaw, 0, staminaCap)
+    : Math.max(staminaAfterRaw, 0);
+
+  return res.json({
+    rolls,
+    sides: diceSides,
+    recoveryTotal,
+    healthBefore,
+    healthAfter,
+    staminaBefore,
+    staminaAfter,
+    maxHealth: healthCap,
+    maxStamina: staminaCap
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => console.log(`Dice match API listening on ${PORT}`));
